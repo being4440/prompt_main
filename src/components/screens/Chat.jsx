@@ -1,11 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { analyzeMood, model } from '../../utils/gemini';
+import { detectCrisisKeywords } from '../../utils/safety';
 
 export default function Chat({ profile, logs, activeContext }) {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const chatScrollRef = useRef(null);
+
+  const toggleListening = () => {
+    if (isListening) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Voice Input.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(prev => prev ? prev + ' ' + transcript : transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
+  };
 
   // Auto-start conversation if activeContext changes and messages are empty
   useEffect(() => {
@@ -32,6 +58,12 @@ export default function Chat({ profile, logs, activeContext }) {
 
   const sendChatMessage = async (text) => {
     if (!text.trim()) return;
+
+    if (detectCrisisKeywords(text)) {
+      setShowCrisisAlert(true);
+    } else {
+      setShowCrisisAlert(false);
+    }
     const userMsg = { role: 'user', text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -76,6 +108,18 @@ export default function Chat({ profile, logs, activeContext }) {
       </div>
 
       <div ref={chatScrollRef} className="flex-1 p-6 overflow-y-auto space-y-6">
+        
+        {showCrisisAlert && (
+          <div className="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm animate-fade-in">
+            <h4 className="text-red-700 font-bold mb-1">We're here for you.</h4>
+            <p className="text-red-600 text-sm mb-2">It sounds like you're having a really difficult time. Please consider reaching out.</p>
+            <div className="flex space-x-4">
+              <a href="tel:988" className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition-colors">Call 988</a>
+              <a href="sms:741741" className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-200 transition-colors">Text HOME to 741741</a>
+            </div>
+          </div>
+        )}
+
         {!messages.length && !isTyping && (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4 opacity-60">
             <div className="text-6xl">✨</div>
@@ -128,7 +172,16 @@ export default function Chat({ profile, logs, activeContext }) {
             type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendChatMessage(chatInput)}
             placeholder="Type your message..."
             className="flex-1 bg-transparent outline-none text-base text-slate-700 py-2"
+            aria-label="Chat input"
           />
+          <button 
+            onClick={toggleListening}
+            className={`w-10 h-10 rounded-full flex items-center justify-center mr-2 transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-indigo-500 hover:bg-indigo-100'}`}
+            title="Voice Input"
+            aria-label="Start voice input"
+          >
+            🎤
+          </button>
           <button 
             onClick={() => sendChatMessage(chatInput)}
             disabled={!chatInput.trim()}

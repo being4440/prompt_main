@@ -8,6 +8,14 @@ export const model = genAI.getGenerativeModel({
   model: "gemini-2.5-flash",
 });
 
+/**
+ * Constructs the system prompt for the Gemini AI model.
+ * It injects the student's profile, today's entry, and recent history.
+ * @param {Object} profile - The student's profile containing name and examDate.
+ * @param {Object} todayEntry - The current check-in entry containing mood and sliders.
+ * @param {Array} recentLogs - An array of recent check-in logs.
+ * @returns {string} The fully constructed system prompt.
+ */
 export function buildSystemPrompt(profile, todayEntry, recentLogs) {
   const diffTime = Math.max(
     0,
@@ -50,12 +58,19 @@ Your job:
 3. Suggest one practical coping technique.
 4. End with a motivational message.
 
-Tone:
-Empathetic, supportive, friendly, and encouraging.
-
+Tone: Empathetic, chill, supportive, and motivating. Like a warm friend who truly gets exam pressure. Never preachy, never clinical.
+Analyze the student's entry and provide a supportive response. 
+CRITICAL CBT INSTRUCTION: If the student's journal shows signs of cognitive distortions (e.g., Catastrophizing, All-or-Nothing thinking, Overgeneralization), gently point it out and help them reframe their thoughts.
 Keep response under 250 words.`;
 }
 
+/**
+ * Analyzes the user's mood by sending the constructed prompt to Gemini.
+ * @param {Object} profile - The student's profile.
+ * @param {Object} todayEntry - Today's check-in entry.
+ * @param {Array} recentLogs - Recent log history.
+ * @returns {Promise<string>} The AI's generated response.
+ */
 export async function analyzeMood(
   profile,
   todayEntry,

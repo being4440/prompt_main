@@ -1,11 +1,14 @@
 import { HomeIcon, CheckInIcon, ChatIcon, DashboardIcon } from '../icons/Icons';
+import { useTranslation } from '../../utils/i18n';
 
 export default function Sidebar({ screen, setScreen, profile, onLogout }) {
+  const { t, lang, changeLang } = useTranslation();
+
   const navItems = [
-    { id: 'home', icon: HomeIcon, label: 'Home' },
-    { id: 'checkin', icon: CheckInIcon, label: 'Check-in' },
-    { id: 'chat', icon: ChatIcon, label: 'Chat' },
-    { id: 'dashboard', icon: DashboardIcon, label: 'Dashboard' }
+    { id: 'home', icon: HomeIcon, label: t('nav_home') },
+    { id: 'checkin', icon: CheckInIcon, label: t('nav_checkin') },
+    { id: 'chat', icon: ChatIcon, label: t('nav_chat') },
+    { id: 'dashboard', icon: DashboardIcon, label: t('nav_dashboard') }
   ];
 
   return (
@@ -28,7 +31,14 @@ export default function Sidebar({ screen, setScreen, profile, onLogout }) {
           );
         })}
       </nav>
-      <div className="p-6 border-t border-slate-100">
+      <div className="p-6 border-t border-slate-100 flex flex-col space-y-4">
+        <div className="flex justify-between items-center text-xs">
+           <span className="text-slate-500 font-medium uppercase tracking-wider">{t('language')}</span>
+           <div className="flex space-x-1">
+             <button onClick={() => changeLang('en')} className={`px-2 py-1 rounded ${lang === 'en' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-slate-400 hover:bg-slate-50'}`} aria-label="Switch to English">EN</button>
+             <button onClick={() => changeLang('hi')} className={`px-2 py-1 rounded ${lang === 'hi' ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-slate-400 hover:bg-slate-50'}`} aria-label="Switch to Hindi">HI</button>
+           </div>
+        </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-200 to-purple-200 flex items-center justify-center text-indigo-700 font-bold shadow-inner">

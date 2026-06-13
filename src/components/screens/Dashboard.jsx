@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { model } from '../../utils/gemini';
-import { getStreak, getAvgMood, getCommonTime, getAvgMetric } from '../../utils/helpers';
+import { getStreak, getAvgMood, getCommonTime, getAvgMetric, calculateCorrelations } from '../../utils/helpers';
 
 export default function Dashboard({ profile, logs }) {
   const [weeklyInsight, setWeeklyInsight] = useState('');
   const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState(null);
+
+  useEffect(() => {
+    const todayStr = new Date().toLocaleDateString();
+    const cached = localStorage.getItem(`moodmate_insight_${todayStr}`);
+    if (cached) setWeeklyInsight(cached);
+  }, []);
 
   const generateWeeklyInsight = async () => {
     if (logs.length === 0) return;
@@ -14,7 +20,7 @@ export default function Dashboard({ profile, logs }) {
     
     const recentLogs = logs.slice(-7);
     const dataString = recentLogs.map(l => 
-      `${new Date(l.timestamp).toLocaleDateString()}: Mood ${l.mood.label}, Energy ${l.energy}, Focus ${l.focus}, Journal: "${l.journalText}"`
+      `${new Date(l.timestamp).toLocaleDateString()}: Mood ${l.mood.label}, Energy ${l.energy}, Focus ${l.focus}, Sleep ${l.sleepHours || '-'}hrs, Study ${l.studyHours || '-'}hrs, Journal: "${l.journalText}"`
     ).join('\n');
 
     const prompt = `Analyze these ${recentLogs.length} days of mood data for a student preparing for ${profile.examType}.
@@ -29,6 +35,8 @@ ${dataString}`;
       const text = result.response.text();
       if (text) {
         setWeeklyInsight(text);
+        const todayStr = new Date().toLocaleDateString();
+        localStorage.setItem(`moodmate_insight_${todayStr}`, text);
       }
     } catch (err) {
       console.error(err);
@@ -134,6 +142,29 @@ ${dataString}`;
             })}
           </div>
         </div>
+
+        {/* Correlations */}
+        {(() => {
+          const correlations = calculateCorrelations(logs);
+          if (!correlations) return null;
+          return (
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm lg:col-span-2">
+              <h3 className="text-xl font-bold text-slate-800 mb-6">Lifestyle Impact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
+                   <p className="text-sm font-bold text-indigo-400 uppercase tracking-wide mb-2">Sleep vs Focus</p>
+                   <p className="text-slate-700 font-medium">When you sleep <span className="font-bold text-indigo-600">7+ hours</span>, your focus averages <span className="font-bold text-indigo-600">{correlations.avgHighSleepFocus}/10</span>.</p>
+                   <p className="text-slate-700 font-medium mt-1">On less sleep, it drops to <span className="font-bold text-orange-500">{correlations.avgLowSleepFocus}/10</span>.</p>
+                </div>
+                <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
+                   <p className="text-sm font-bold text-purple-400 uppercase tracking-wide mb-2">Study Volume</p>
+                   <p className="text-slate-700 font-medium">You have averaged <span className="font-bold text-purple-600">{correlations.avgStudyHours} hours</span> of studying per logged day.</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* AI Weekly Insight */}
@@ -198,6 +229,8 @@ ${dataString}`;
                       <span>Energy: <strong className="text-slate-800">{l.energy}/10</strong></span>
                       <span>Focus: <strong className="text-slate-800">{l.focus}/10</strong></span>
                       <span>Confidence: <strong className="text-slate-800">{l.confidence}/10</strong></span>
+                      {l.sleepHours && <span>Sleep: <strong className="text-slate-800">{l.sleepHours}h</strong></span>}
+                      {l.studyHours && <span>Study: <strong className="text-slate-800">{l.studyHours}h</strong></span>}
                     </div>
                     <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 mb-3 text-sm">
                       <span className="font-bold text-indigo-400 uppercase text-[10px] tracking-wider block mb-1">Prompt</span>

@@ -18,6 +18,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [logs, setLogs] = useState([]);
   const [activeCheckinContext, setActiveCheckinContext] = useState(null);
+  const [settings, setSettings] = useState({ geetaQuotesEnabled: true });
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -29,6 +30,10 @@ export default function App() {
     const savedLogs = localStorage.getItem('moodmate_logs');
     if (savedLogs) {
       setLogs(JSON.parse(savedLogs));
+    }
+    const savedSettings = localStorage.getItem('moodmate_settings');
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
     }
   }, []);
 
@@ -51,9 +56,17 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('moodmate_profile');
     localStorage.removeItem('moodmate_logs');
+    localStorage.removeItem('moodmate_settings');
     setProfile(null);
     setLogs([]);
+    setSettings({ geetaQuotesEnabled: true });
     setScreen('onboarding');
+  };
+
+  const updateSettings = (newSettings) => {
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    localStorage.setItem('moodmate_settings', JSON.stringify(updated));
   };
 
   // Render Onboarding (no layout wrapper)
@@ -75,7 +88,7 @@ export default function App() {
         <Header profile={profile} onLogout={handleLogout} />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-24 md:pb-8">
-          {screen === 'home' && <Home profile={profile} logs={logs} setScreen={setScreen} />}
+          {screen === 'home' && <Home profile={profile} logs={logs} setScreen={setScreen} settings={settings} updateSettings={updateSettings} />}
           {screen === 'checkin' && <CheckIn onComplete={handleCheckinComplete} />}
           {screen === 'chat' && <Chat profile={profile} logs={logs} activeContext={activeCheckinContext} />}
           {screen === 'dashboard' && <Dashboard profile={profile} logs={logs} />}
